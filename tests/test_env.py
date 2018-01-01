@@ -1,0 +1,170 @@
+import pytest
+
+from runtime_context import RuntimeContext, RuntimeContextEnv
+
+
+class MyEnv:
+    @property
+    def username(self):
+        return 'default_username'
+
+    @property
+    def password(self):
+        raise ValueError('password not set')
+
+
+def test_rc_env_from_env_cls():
+    env2 = RuntimeContextEnv.for_env(MyEnv)  # type: MyEnv
+
+    assert env2.username == 'default_username'
+    with pytest.raises(ValueError):
+        assert env2.password
+
+    with env2(password='secret'):
+        assert env2.username == 'default_username'
+        assert env2.password == 'secret'
+
+
+def test_rc_env_from_custom_env_instance():
+    my_env = MyEnv()
+    assert my_env.username == 'default_username'
+
+    env = RuntimeContextEnv.for_env(my_env)
+
+    assert env.username == 'default_username'
+    with env(username='custom_username'):
+        assert env.username == 'custom_username'
+
+
+def test_rc_env_with_custom_rc_cls():
+    class MyRuntimeContext(RuntimeContext):
+        pass
+
+    env1 = RuntimeContextEnv.for_env(MyEnv, MyRuntimeContext)
+    assert isinstance(env1.runtime_context, MyRuntimeContext)
+
+    env2 = RuntimeContextEnv.for_env(MyEnv, MyRuntimeContext())
+    assert isinstance(env2.runtime_context, MyRuntimeContext)
+
+
+def test_rc_env_setattr_sets_current_context_vars():
+    env = RuntimeContextEnv.for_env(MyEnv)
+
+    assert env.username == 'default_username'
+
+    with env():
+        assert env.username == 'default_username'
+
+        env.username = 'custom_username'
+        assert env.username == 'custom_username'
+
+    assert env.username == 'default_username'
+
+
+def test_reading_rc_env_from_context_should_not_touch_env_property_initialiser():
+    class CustomEnv:
+        @property
+        def dont_touch_me(self):
+            raise ValueError()
+
+    env = RuntimeContextEnv.for_env(CustomEnv())
+
+    assert env.has('dont_touch_me')
+
+    with env():
+        assert env.has('dont_touch_me')
+
+        with pytest.raises(ValueError):
+            assert env.dont_touch_me
+
+        with pytest.raises(ValueError):
+            assert env.get('dont_touch_me')
+
+        with pytest.raises(ValueError):
+            assert env.get('dont_touch_me', 42)
+
+        with env(dont_touch_me=23):
+            assert env.dont_touch_me == 23
+            assert env.has('dont_touch_me')
+            assert env.get('dont_touch_me') == 23
+
+        assert env.has('dont_touch_me')
+
+        with pytest.raises(ValueError):
+            assert env.dont_touch_me
+
+
+def test_env_is_strict():
+    class CustomEnv:
+        pass
+
+    custom_env = CustomEnv()
+    custom_env.c = 3  # should be inaccessible through RuntimeContextEnv because it is not a class attribute
+
+    #
+    # In this test we try two attributes c and d which both should be inavailable.
+    #   `d` is not set anywhere
+    #   `c` is set only on instance, not CustomEnv class, so should be inaccessible via RuntimeContextEnv
+    #
+
+    env = RuntimeContextEnv.for_env(custom_env)
+    with pytest.raises(AttributeError):
+        assert env.c
+
+    with pytest.raises(AttributeError):
+        assert env.d
+
+    with pytest.raises(AttributeError):
+        env.c = 33
+
+    with pytest.raises(AttributeError):
+        env.d = 33
+
+    with pytest.raises(AttributeError):
+        env.get('c')
+
+    with pytest.raises(AttributeError):
+        env.get('d')
+
+    with pytest.raises(AttributeError):
+        env.get('c', 333)
+
+    with pytest.raises(AttributeError):
+        env.get('d', 333)
+
+    with pytest.raises(AttributeError):
+        env.set('c', 3333)
+
+    with pytest.raises(AttributeError):
+        env.set('d', 3333)
+
+
+def test_env_still_allows_vars_set_in_runtime_context():
+    class CustomEnv:
+        pass
+
+    runtime_context = RuntimeContext()
+    with runtime_context(dry_run=True):
+        env = RuntimeContextEnv.for_env(CustomEnv(), runtime_context)
+        assert env.dry_run is True
+        assert env.has('dry_run')
+        assert env.get('dry_run') is True
+        assert env.get('dry_run', 5) is True
+
+        env.dry_run = False
+        assert env.dry_run is False
+        assert env.get('dry_run') is False
+        assert env.has('dry_run')
+
+        with env(dry_run=555):
+            assert env.dry_run == 555
+            assert env.get('dry_run') == 555
+
+            with env():
+                env.set('dry_run', 777)
+                assert env.dry_run == 777
+                assert env.get('dry_run') == 777
+
+        assert env.dry_run is False
+        assert env.get('dry_run') is False
+        assert env.has('dry_run')
