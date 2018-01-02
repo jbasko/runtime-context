@@ -120,13 +120,6 @@ class RuntimeContextEnv:
                 raise AttributeError(name)
         return self.runtime_context(**context_vars)
 
-    def for_cli(self, cli_args):
-        """
-        Creates a context manager with only non-None CLI args set in runtime context.
-        """
-        context = {k: v for k, v in cli_args.__dict__.items() if v is not None}
-        return self.runtime_context(**context)
-
     @classmethod
     def for_env(cls, env_or_cls, runtime_context_or_cls=None):
         runtime_context_or_cls = runtime_context_or_cls or RuntimeContext
