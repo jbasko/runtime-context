@@ -138,6 +138,10 @@ def test_env_is_strict():
     with pytest.raises(AttributeError):
         env.set('d', 3333)
 
+    with pytest.raises(AttributeError):
+        with env(c=33):
+            pass
+
 
 def test_env_still_allows_vars_set_in_runtime_context():
     class CustomEnv:

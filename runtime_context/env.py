@@ -115,6 +115,9 @@ class RuntimeContextEnv:
         return setattr(self, name, value)
 
     def __call__(self, **context_vars):
+        for name in context_vars:
+            if not self.has(name):
+                raise AttributeError(name)
         return self.runtime_context(**context_vars)
 
     def for_cli(self, cli_args):
