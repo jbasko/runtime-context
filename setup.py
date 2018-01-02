@@ -24,7 +24,9 @@ setup(
     description='Runtime context',
     long_description=read('README.rst'),
     packages=['runtime_context'],
-    install_requires=[],
+    install_requires=[
+        'hookery >=1.1.1, <=2.0.0',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
