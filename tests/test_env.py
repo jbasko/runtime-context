@@ -172,3 +172,37 @@ def test_env_still_allows_vars_set_in_runtime_context():
         assert env.dry_run is False
         assert env.get('dry_run') is False
         assert env.has('dry_run')
+
+
+def test_env_self_refers_to_rc_env_not_env():
+    class CustomEnv:
+        @property
+        def greeting(self):
+            return 'hello'
+
+        @property
+        def message(self):
+            return '{} world!'.format(self.greeting)
+
+    runtime_context = RuntimeContext()
+    env = RuntimeContextEnv.for_env(CustomEnv, runtime_context)
+    assert env.message == 'hello world!'
+
+    with env(greeting='Goodbye'):
+        assert env.message == 'Goodbye world!'
+
+        with env():
+            assert env.message == 'Goodbye world!'
+
+            with env(message='No message'):
+                assert env.message == 'No message'
+
+                with env(greeting='Does not matter'):
+                    assert env.message == 'No message'
+
+            with env(greeting='Ciao'):
+                assert env.message == 'Ciao world!'
+
+        assert env.message == 'Goodbye world!'
+
+    assert env.message == 'hello world!'

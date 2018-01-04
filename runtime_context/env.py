@@ -76,6 +76,13 @@ class RuntimeContextEnv:
         if self.runtime_context.has(name):
             return self.runtime_context.get(name)
 
+        # [Hackery no. 01] To use the rewired Env @properties
+        if name in self.__class__.__dict__:
+            value = self.__class__.__dict__[name]
+            if hasattr(value, '__get__'):
+                return value.__get__(self, self.__class__)
+            return value
+
         if self._env_has(name):
             return getattr(self.env, name)
 
@@ -121,8 +128,7 @@ class RuntimeContextEnv:
         return self.runtime_context(**context_vars)
 
     @classmethod
-    def for_env(cls, env_or_cls, runtime_context_or_cls=None):
-        runtime_context_or_cls = runtime_context_or_cls or RuntimeContext
+    def for_env(cls, env_or_cls, runtime_context_or_cls=RuntimeContext):
         if isinstance(runtime_context_or_cls, type):
             runtime_context_cls = runtime_context_or_cls
             runtime_context = runtime_context_or_cls()
@@ -146,4 +152,11 @@ class RuntimeContextEnv:
                 (cls, env_cls),
                 {},
             )
+
+        # [Hackery no. 01] To rewire env_cls properties so that "self" in their code
+        # refers to the runtime-context aware env, not the underlying env instance.
+        for k, v in env_cls.__dict__.items():
+            if not hasattr(cls, k):
+                setattr(rc_env_cls, k, v)
+
         return rc_env_cls(env=env_instance, runtime_context=runtime_context)
