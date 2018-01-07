@@ -23,7 +23,6 @@ cache:
   - $HOME/.cache/pip
 
 deploy:
-  matrix:
   - provider: pypi
     user: jbasko
     password:
