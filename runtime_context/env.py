@@ -53,10 +53,10 @@ _runtime_context_env_attrs = (
 class RuntimeContextEnv:
 
     def __init__(self, env=None, runtime_context=None):
-        super().__init__()
-
         self.env = env
         self.runtime_context = runtime_context
+
+        super().__init__()
 
     def _env_has(self, name):
         # It is crucial to not call hasattr(self.env, name) because that may
@@ -89,6 +89,10 @@ class RuntimeContextEnv:
         if hasattr(self.runtime_context, name):
             return getattr(self.runtime_context, name)
 
+        # Attributes that user has set directly on instance
+        if name in self.__dict__:
+            return self.__dict__[name]
+
         raise AttributeError(name)
 
     def __setattr__(self, name, value):
@@ -98,7 +102,9 @@ class RuntimeContextEnv:
         elif self._env_has(name) or self.runtime_context.has(name):
             return self.runtime_context.set(name, value)
 
-        raise AttributeError(name)
+        # User should be allowed to use whatever attributes they want in
+        # their Env instances.
+        return object.__setattr__(self, name, value)
 
     def get(self, name, default=None):
         if self.runtime_context.has(name):
@@ -119,7 +125,10 @@ class RuntimeContextEnv:
         return False
 
     def set(self, name, value):
-        return setattr(self, name, value)
+        if self.has(name):
+            return setattr(self, name, value)
+        else:
+            raise AttributeError(name)
 
     def __call__(self, **context_vars):
         for name in context_vars:

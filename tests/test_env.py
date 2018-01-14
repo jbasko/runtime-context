@@ -101,46 +101,27 @@ def test_env_is_strict():
     custom_env = CustomEnv()
     custom_env.c = 3  # should be inaccessible through RuntimeContextEnv because it is not a class attribute
 
-    #
-    # In this test we try two attributes c and d which both should be inavailable.
-    #   `d` is not set anywhere
-    #   `c` is set only on instance, not CustomEnv class, so should be inaccessible via RuntimeContextEnv
-    #
-
     env = RuntimeContextEnv.for_env(custom_env)
-    with pytest.raises(AttributeError):
-        assert env.c
+    assert not env.has('c')
 
     with pytest.raises(AttributeError):
-        assert env.d
+        _ = env.c  # noqa
 
-    with pytest.raises(AttributeError):
-        env.c = 33
+    # Set directly on instance, not an env variable!
+    env.c = 5
+    assert env.c == 5
+    assert not env.has('c')
 
+    # Confirm in action
     with pytest.raises(AttributeError):
-        env.d = 33
-
-    with pytest.raises(AttributeError):
-        env.get('c')
-
-    with pytest.raises(AttributeError):
-        env.get('d')
-
-    with pytest.raises(AttributeError):
-        env.get('c', 333)
-
-    with pytest.raises(AttributeError):
-        env.get('d', 333)
-
-    with pytest.raises(AttributeError):
-        env.set('c', 3333)
-
-    with pytest.raises(AttributeError):
-        env.set('d', 3333)
-
-    with pytest.raises(AttributeError):
-        with env(c=33):
+        with env(c=15):
             pass
+
+    with pytest.raises(AttributeError):
+        env.set('c', 15)
+
+    with pytest.raises(AttributeError):
+        env.get('c', 15)
 
 
 def test_env_still_allows_vars_set_in_runtime_context():
@@ -206,3 +187,13 @@ def test_env_self_refers_to_rc_env_not_env():
         assert env.message == 'Goodbye world!'
 
     assert env.message == 'hello world!'
+
+
+def test_env_init_is_not_broken():
+
+    class CustomEnv:
+        def __init__(self):
+            self.x = 1
+
+    env = RuntimeContextEnv.for_env(CustomEnv)
+    assert env.x == 1
