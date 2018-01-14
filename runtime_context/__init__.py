@@ -1,9 +1,9 @@
-__version__ = '0.5.0'
+__version__ = '1.0.0'
 
-from .env import RuntimeContextEnv
+from .env2 import runtime_context_env
 from .runtime_context import RuntimeContext
 
 __all__ = [
     'RuntimeContext',
-    'RuntimeContextEnv',
+    'runtime_context_env',
 ]

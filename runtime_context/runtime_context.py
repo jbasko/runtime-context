@@ -37,7 +37,7 @@ class RuntimeContext:
         Attribute access is strict -- names not available in the stack will
         raise an AttributeError.
         """
-        if self.has(name):
+        if self.is_context_var(name):
             return self.get(name)
         raise AttributeError(name)
 
@@ -52,7 +52,7 @@ class RuntimeContext:
             raise RuntimeError('Trying to set context variable {!r} outside of runtime context'.format(name))
         self._stack[-1][name] = value
 
-    def has(self, name):
+    def is_context_var(self, name):
         """
         Returns True if `name` is declared anywhere in the context stack.
         """

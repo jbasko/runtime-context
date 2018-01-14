@@ -1,10 +1,6 @@
 import pytest
 
 
-def test_can_import_runtime_context():
-    from runtime_context import RuntimeContext, RuntimeContextEnv  # noqa
-
-
 def test_rc_fixture(rc):
     import runtime_context
 
@@ -50,50 +46,50 @@ def test_rc_basics(rc):
 
 
 def test_rc_has_and_get(rc):
-    assert not rc.has('xx')
+    assert not rc.is_context_var('xx')
     assert rc.get('xx') is None
     assert rc.get('xx', 5) == 5
 
     with rc(xx=False):
-        assert rc.has('xx')
+        assert rc.is_context_var('xx')
         assert rc.get('xx') is False
         assert rc.get('xx', 5) is False
 
         with rc():
-            assert rc.has('xx')
+            assert rc.is_context_var('xx')
             assert rc.get('xx') is False
             assert rc.get('xx', 5) is False
 
             with rc():
-                assert rc.has('xx')
+                assert rc.is_context_var('xx')
                 assert rc.get('xx') is False
                 assert rc.get('xx', 5) is False
 
                 with rc(xx=True):
-                    assert rc.has('xx')
+                    assert rc.is_context_var('xx')
                     assert rc.get('xx') is True
                     assert rc.get('xx', 5) is True
 
-        assert rc.has('xx')
+        assert rc.is_context_var('xx')
         assert rc.get('xx') is False
         assert rc.get('xx', 5) is False
 
-    assert not rc.has('xx')
+    assert not rc.is_context_var('xx')
     assert rc.get('xx') is None
     assert rc.get('xx', 5) == 5
 
 
 def test_rc_set(rc):
     with rc():
-        assert not rc.has('yy')
+        assert not rc.is_context_var('yy')
         assert rc.get('yy') is None
         assert rc.get('yy', 5) == 5
 
         with rc():
-            assert not rc.has('yy')
+            assert not rc.is_context_var('yy')
 
             rc.set('yy', False)
-            assert rc.has('yy')
+            assert rc.is_context_var('yy')
             assert rc.get('yy') is False
             assert rc.get('yy', 5) is False
 
@@ -104,18 +100,18 @@ def test_rc_set(rc):
             rc.set('yy', True)
 
             with rc():
-                assert rc.has('yy')
+                assert rc.is_context_var('yy')
                 assert rc.get('yy') is True
 
                 with rc():
                     rc.set('yy', 22)
-                    assert rc.has('yy')
+                    assert rc.is_context_var('yy')
                     assert rc.get('yy') == 22
 
-                assert rc.has('yy')
+                assert rc.is_context_var('yy')
                 assert rc.get('yy') is True
 
-            assert rc.has('yy')
+            assert rc.is_context_var('yy')
             assert rc.get('yy') is True
 
-        assert not rc.has('yy')
+        assert not rc.is_context_var('yy')
