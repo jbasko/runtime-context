@@ -1,4 +1,4 @@
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 from .env2 import runtime_context_env
 from .runtime_context import RuntimeContext

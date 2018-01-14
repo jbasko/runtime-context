@@ -1,14 +1,6 @@
 import pytest
 
 
-def test_rc_fixture(rc):
-    import runtime_context
-
-    assert isinstance(rc, runtime_context.RuntimeContext)
-    assert len(rc._stack) == 1
-    assert rc._stack[-1] == {}
-
-
 def test_rc_basics(rc):
     """
     Basics are:

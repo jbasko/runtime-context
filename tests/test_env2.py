@@ -10,6 +10,7 @@ def test_all():
         y = 1
 
         def __init__(self):
+            super().__init__()
             self.z = 2
 
     app = App()
@@ -92,3 +93,43 @@ def test_app_with_inheritance():
 
     assert app.get('x') == 0
     assert app.get('y') == 1
+
+
+def test_change_hooks():
+    @runtime_context_env
+    class App:
+        config_file = 'config.json'
+        x = None
+
+        def __init__(self):
+            super().__init__()
+            self.times_reloaded = 0
+
+        def reload_config(self):
+            self.times_reloaded += 1
+
+    app = App()
+
+    @app.context_var_updated
+    def reload_local_config(name):
+        if name == 'config_file':
+            app.reload_config()
+
+    with app():
+        with app(x=1):
+            assert app.times_reloaded == 0
+            with app(config_file='config.yaml'):
+                assert app.times_reloaded == 1
+
+            assert app.times_reloaded == 2
+
+        assert app.times_reloaded == 2
+
+        app.config_file = 'config.txt'
+        assert app.times_reloaded == 3
+
+        with app():
+            assert app.times_reloaded == 3
+        assert app.times_reloaded == 3
+
+    assert app.times_reloaded == 4

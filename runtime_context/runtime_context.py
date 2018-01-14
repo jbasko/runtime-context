@@ -13,12 +13,13 @@ class _ContextManager:
 
     def __enter__(self):
         self.runtime_context._stack.append(self.context_vars)
-        self.runtime_context.context_entered.trigger(context=self.runtime_context)
+        self.runtime_context.context_entered.trigger(context_vars=self.context_vars)
         return self.runtime_context
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.runtime_context._stack.pop()
-        self.runtime_context.context_exited.trigger(context=self.runtime_context)
+        popped = self.runtime_context._stack.pop()
+        assert popped is self.context_vars
+        self.runtime_context.context_exited.trigger(context_vars=self.context_vars)
 
 
 class RuntimeContext:
