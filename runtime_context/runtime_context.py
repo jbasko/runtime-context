@@ -1,6 +1,6 @@
 import threading
 
-from hookery import HookRegistry
+from hookery import Registry
 
 _thread_local = threading.local()
 _thread_local.stack = []
@@ -13,13 +13,13 @@ class _ContextManager:
 
     def __enter__(self):
         self.runtime_context._stack.append(self.context_vars)
-        self.runtime_context.context_entered.trigger(context_vars=self.context_vars)
+        self.runtime_context.context_entered(context_vars=self.context_vars)
         return self.runtime_context
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         popped = self.runtime_context._stack.pop()
         assert popped is self.context_vars
-        self.runtime_context.context_exited.trigger(context_vars=self.context_vars)
+        self.runtime_context.context_exited(context_vars=self.context_vars)
 
 
 class RuntimeContext:
@@ -27,20 +27,33 @@ class RuntimeContext:
     This is it.
     """
 
+    _internals_ = (
+        '_stack',
+        '_hookery',
+        'context_entered',
+        'context_exited',
+    )
+
     def __init__(self):
         self._stack = _thread_local.stack
-        self._hooks = HookRegistry(self)
-        self.context_entered = self._hooks.register_event('context_entered')
-        self.context_exited = self._hooks.register_event('context_exited')
+        self._hookery = Registry()
+        self.context_entered = self._hookery.register_event('context_entered')
+        self.context_exited = self._hookery.register_event('context_exited')
 
     def __getattr__(self, name):
         """
         Attribute access is strict -- names not available in the stack will
-        raise an AttributeError.
+        raise an AttributeError. Use the .get() method for non-strict access.
         """
         if self.is_context_var(name):
             return self.get(name)
         raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        if name in self._internals_:
+            object.__setattr__(self, name, value)
+        else:
+            self.set(name, value)
 
     def get(self, name, default=None):
         for ctx in reversed(self._stack):

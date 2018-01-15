@@ -110,10 +110,9 @@ def test_change_hooks():
 
     app = App()
 
-    @app.context_var_updated
-    def reload_local_config(name):
-        if name == 'config_file':
-            app.reload_config()
+    @app.context_var_updated.listener(predicate=lambda name: name == 'config_file')
+    def reload_local_config():
+        app.reload_config()
 
     with app():
         with app(x=1):
@@ -133,3 +132,33 @@ def test_change_hooks():
         assert app.times_reloaded == 3
 
     assert app.times_reloaded == 4
+
+
+def test_env_can_access_runtime_context_events():
+    @runtime_context_env
+    class App:
+        pass
+
+    app = App()
+    calls = []
+
+    @app.context_entered.listener
+    def context_entered(context_vars):
+        calls.append(('context_entered', context_vars))
+
+    @app.context_exited.listener
+    def context_exited(context_vars):
+        calls.append(('context_exited', context_vars))
+
+    assert calls == []
+
+    with app(x=1):
+        with app(y=2):
+            pass
+
+    assert calls == [
+        ('context_entered', {'x': 1}),
+        ('context_entered', {'y': 2}),
+        ('context_exited', {'y': 2}),
+        ('context_exited', {'x': 1}),
+    ]

@@ -25,13 +25,14 @@ setup(
     long_description=read('README.rst'),
     packages=['runtime_context'],
     install_requires=[
-        'hookery >=1.1.1, <=2.0.0',
+        'hookery >=2.2.0, <=3.0.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'License :: OSI Approved :: MIT License',
     ],

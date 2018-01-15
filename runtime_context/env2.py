@@ -2,7 +2,7 @@
 @runtime_context_env is a decorator for your custom Env class which may want to have its attributes overridden by
 context variables.
 """
-from hookery import HookRegistry
+from hookery import Registry
 
 from .runtime_context import RuntimeContext
 
@@ -13,7 +13,9 @@ class EnvBase:
         'set',
         'runtime_context',
         'is_context_var',
-        '_hooks',
+        '_hookery',
+        'context_entered',
+        'context_exited',
         'context_var_updated',
         '_handle_runtime_context_entered',
         '_handle_runtime_context_exited',
@@ -22,10 +24,12 @@ class EnvBase:
     runtime_context = None  # type: RuntimeContext
 
     def __init__(self):
-        self._hooks = HookRegistry()
-        self.context_var_updated = self._hooks.register_event('context_var_updated')
-        self.runtime_context.context_entered(self._handle_runtime_context_entered)
-        self.runtime_context.context_exited(self._handle_runtime_context_exited)
+        self._hookery = Registry()
+        self.context_var_updated = self._hookery.register_event('context_var_updated')
+        self.context_entered = self.runtime_context.context_entered
+        self.context_exited = self.runtime_context.context_exited
+        self.context_entered.listener(self._handle_runtime_context_entered)
+        self.context_exited.listener(self._handle_runtime_context_exited)
 
     def is_context_var(self, name):
         """
@@ -56,7 +60,7 @@ class EnvBase:
             object.__setattr__(self, name, value)
         elif self.is_context_var(name):
             self.runtime_context.set(name, value)
-            self.context_var_updated.trigger(name=name)
+            self.context_var_updated(name=name)
         else:
             object.__setattr__(self, name, value)
 
@@ -72,11 +76,11 @@ class EnvBase:
 
     def _handle_runtime_context_entered(self, context_vars):
         for k in context_vars.keys():
-            self.context_var_updated.trigger(name=k)
+            self.context_var_updated(name=k)
 
     def _handle_runtime_context_exited(self, context_vars):
         for k in context_vars.keys():
-            self.context_var_updated.trigger(name=k)
+            self.context_var_updated(name=k)
 
 
 def runtime_context_env(env_cls):

@@ -37,7 +37,7 @@ def test_rc_basics(rc):
             assert not rc.b
 
 
-def test_rc_has_and_get(rc):
+def test_rc_is_context_var_and_get(rc):
     assert not rc.is_context_var('xx')
     assert rc.get('xx') is None
     assert rc.get('xx', 5) == 5
@@ -107,3 +107,49 @@ def test_rc_set(rc):
             assert rc.get('yy') is True
 
         assert not rc.is_context_var('yy')
+
+
+def test_context_entered_and_exited_events_are_triggered(rc):
+    calls = []
+
+    @rc.context_entered.listener
+    def context_entered(context_vars):
+        calls.append(('context_entered', context_vars))
+
+    @rc.context_exited.listener
+    def context_existed(context_vars):
+        calls.append(('context_exited', context_vars))
+
+    assert len(calls) == 0
+
+    with rc():
+        assert len(calls) == 1
+        assert calls[-1] == ('context_entered', {})
+
+        with rc(x=1, y=2):
+            assert len(calls) == 2
+            assert calls[-1] == ('context_entered', {'x': 1, 'y': 2})
+
+            rc.set('x', 1000)
+
+        assert len(calls) == 3
+        assert calls[-1] == ('context_exited', {'x': 1000, 'y': 2})
+
+    assert len(calls) == 4
+    assert calls[-1] == ('context_exited', {})
+
+
+def test_setting_attribute_on_runtime_context_updates_current_context_vars(rc):
+    with rc():
+        assert rc._stack[-1] == {}
+
+        rc.x = 1
+        rc.y = 2
+        assert rc._stack[-1] == {'x': 1, 'y': 2}
+
+        with rc(w=0):
+            assert rc._stack[-1] == {'w': 0}
+            rc.z = 3
+            assert rc._stack[-1] == {'w': 0, 'z': 3}
+
+        assert rc._stack[-1] == {'x': 1, 'y': 2}
