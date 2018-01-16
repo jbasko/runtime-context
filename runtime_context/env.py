@@ -2,7 +2,7 @@
 @runtime_context_env is a decorator for your custom Env class which may want to have its attributes overridden by
 context variables.
 """
-from hookery import Registry
+from hookery import Event, Registry  # noqa
 
 from .runtime_context import RuntimeContext
 
@@ -13,6 +13,7 @@ class EnvBase:
         'set',
         'runtime_context',
         'is_context_var',
+        'reset_context',
         '_hookery',
         'context_entered',
         'context_exited',
@@ -25,9 +26,9 @@ class EnvBase:
 
     def __init__(self):
         self._hookery = Registry()
-        self.context_var_updated = self._hookery.register_event('context_var_updated')
-        self.context_entered = self.runtime_context.context_entered
-        self.context_exited = self.runtime_context.context_exited
+        self.context_var_updated = self._hookery.register_event('context_var_updated')  # type: Event
+        self.context_entered = self.runtime_context.context_entered  # type: Event
+        self.context_exited = self.runtime_context.context_exited  # type: Event
         self.context_entered.listener(self._handle_runtime_context_entered)
         self.context_exited.listener(self._handle_runtime_context_exited)
 
@@ -74,12 +75,15 @@ class EnvBase:
             raise AttributeError(name)
         setattr(self, name, value)
 
+    def reset_context(self):
+        return self.runtime_context.reset_context()
+
     def _handle_runtime_context_entered(self, context_vars):
-        for k in context_vars.keys():
+        for k in list(context_vars.keys()):
             self.context_var_updated(name=k)
 
     def _handle_runtime_context_exited(self, context_vars):
-        for k in context_vars.keys():
+        for k in list(context_vars.keys()):
             self.context_var_updated(name=k)
 
 

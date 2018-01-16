@@ -66,6 +66,12 @@ class RuntimeContext:
             raise RuntimeError('Trying to set context variable {!r} outside of runtime context'.format(name))
         self._stack[-1][name] = value
 
+    def reset_context(self):
+        """
+        Clears current context state
+        """
+        self._stack[-1].clear()
+
     def is_context_var(self, name):
         """
         Returns True if `name` is declared anywhere in the context stack.

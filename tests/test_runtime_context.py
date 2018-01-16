@@ -153,3 +153,22 @@ def test_setting_attribute_on_runtime_context_updates_current_context_vars(rc):
             assert rc._stack[-1] == {'w': 0, 'z': 3}
 
         assert rc._stack[-1] == {'x': 1, 'y': 2}
+
+
+def test_reset_context(rc):
+    with rc():
+        assert rc._stack[-1] == {}
+
+        rc.reset_context()
+        assert rc._stack[-1] == {}
+
+        rc.x = 1
+        rc.y = 2
+
+        rc.reset_context()
+        assert rc._stack[-1] == {}
+
+        with rc(x=11, y=22):
+            rc.x = 111
+            rc.reset_context()
+            assert rc._stack[-1] == {}

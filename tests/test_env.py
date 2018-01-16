@@ -1,6 +1,8 @@
+from typing import Union  # noqa
+
 import pytest
 
-from runtime_context import runtime_context_env
+from runtime_context import EnvBase, runtime_context_env  # noqa
 
 
 def test_all():
@@ -95,43 +97,47 @@ def test_app_with_inheritance():
     assert app.get('y') == 1
 
 
-def test_change_hooks():
+def test_env_example():
+    dummy_config_files = {
+        'config.json': {
+            'db_name': 'stuff',
+        },
+        'config.ini': {
+            'db_name': 'products',
+        },
+    }
+
     @runtime_context_env
-    class App:
-        config_file = 'config.json'
-        x = None
+    class YourAppEnv:
+        config_file = None
+        db_name = None
 
-        def __init__(self):
-            super().__init__()
-            self.times_reloaded = 0
+    env = YourAppEnv()  # type: Union[YourAppEnv, EnvBase]
 
-        def reload_config(self):
-            self.times_reloaded += 1
+    @env.context_var_updated.listener(predicate=lambda name: name == 'config_file')
+    def config_file_updated():
+        if not env.config_file:
+            return
 
-    app = App()
+        # print('Loading new config from {}'.format(env.config_file))
+        for name, value in dummy_config_files[env.config_file].items():
+            env.set(name, value)
 
-    @app.context_var_updated.listener(predicate=lambda name: name == 'config_file')
-    def reload_local_config():
-        app.reload_config()
+    with env():
+        assert env.db_name is None
 
-    with app():
-        with app(x=1):
-            assert app.times_reloaded == 0
-            with app(config_file='config.yaml'):
-                assert app.times_reloaded == 1
+        env.config_file = 'config.json'
+        assert env.db_name == 'stuff'
 
-            assert app.times_reloaded == 2
+        with env(config_file='config.ini'):
+            assert env.db_name == 'products'
 
-        assert app.times_reloaded == 2
+            env.db_name = 'products_modified'
+            assert env.db_name == 'products_modified'
 
-        app.config_file = 'config.txt'
-        assert app.times_reloaded == 3
+        assert env.db_name == 'stuff'
 
-        with app():
-            assert app.times_reloaded == 3
-        assert app.times_reloaded == 3
-
-    assert app.times_reloaded == 4
+    assert env.db_name is None
 
 
 def test_env_can_access_runtime_context_events():
@@ -162,3 +168,32 @@ def test_env_can_access_runtime_context_events():
         ('context_exited', {'y': 2}),
         ('context_exited', {'x': 1}),
     ]
+
+
+def test_reset_context():
+    @runtime_context_env
+    class App:
+        x = 1
+        y = 2
+
+    app = App()  # type: Union[App, EnvBase]
+
+    with app():
+        assert app.x == 1
+        assert app.y == 2
+        app.reset_context()
+
+        assert app.x == 1
+        assert app.y == 2
+
+        app.x = 11
+        assert app.x == 11
+
+        app.reset_context()
+        assert app.x == 1
+
+        with app(y=22):
+            assert app.y == 22
+
+            app.reset_context()
+            assert app.y == 2
