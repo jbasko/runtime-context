@@ -1,6 +1,6 @@
 import pytest
 
-from runtime_context.env2 import runtime_context_env
+from runtime_context import runtime_context_env
 
 
 def test_all():
