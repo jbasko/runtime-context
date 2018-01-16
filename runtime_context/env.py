@@ -9,15 +9,17 @@ from .runtime_context import RuntimeContext
 
 class EnvBase:
     _internals_ = (
+        'runtime_context',
         'get',
         'set',
-        'runtime_context',
+        'reset',
         'is_context_var',
         'reset_context',
         '_hookery',
         'context_entered',
         'context_exited',
-        'context_var_updated',
+        'context_var_set',
+        'context_var_reset',
         '_handle_runtime_context_entered',
         '_handle_runtime_context_exited',
     )
@@ -26,9 +28,24 @@ class EnvBase:
 
     def __init__(self):
         self._hookery = Registry()
-        self.context_var_updated = self._hookery.register_event('context_var_updated')  # type: Event
+
+        # Event that is fired when a context var has value set inside a context or on context entry.
+        # It does not fire on context exit when a context var may have its value effectively reset.
+        # If in your context_var_set listener you write any side changes to the current context,
+        # it should be sufficient to listen to only this event as all such side changes
+        # will be reset on exiting the context anyway -- then there is no need to listen to context_var_reset.
+        self.context_var_set = self._hookery.register_event('context_var_set')  # type: Event
+
+        # Event fired when a context var has value reset on context exit
+        # or when context var has value reset individually
+        self.context_var_reset = self._hookery.register_event('context_var_reset')  # type: Event
+
+        # Event fired on entering a context
         self.context_entered = self.runtime_context.context_entered  # type: Event
+
+        # Event fired on exiting a context
         self.context_exited = self.runtime_context.context_exited  # type: Event
+
         self.context_entered.listener(self._handle_runtime_context_entered)
         self.context_exited.listener(self._handle_runtime_context_exited)
 
@@ -61,9 +78,18 @@ class EnvBase:
             object.__setattr__(self, name, value)
         elif self.is_context_var(name):
             self.runtime_context.set(name, value)
-            self.context_var_updated(name=name)
+            self.context_var_set(name=name)
         else:
             object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        if name in EnvBase._internals_:
+            raise AttributeError('{!r} should not be deleted'.format(name))
+        elif self.is_context_var(name):
+            self.runtime_context.reset(name)
+            self.context_var_reset(name=name)
+        else:
+            object.__delattr__(self, name)
 
     def get(self, name):
         if not self.is_context_var(name):
@@ -75,16 +101,19 @@ class EnvBase:
             raise AttributeError(name)
         setattr(self, name, value)
 
+    def reset(self, name):
+        delattr(self, name)
+
     def reset_context(self):
         return self.runtime_context.reset_context()
 
     def _handle_runtime_context_entered(self, context_vars):
         for k in list(context_vars.keys()):
-            self.context_var_updated(name=k)
+            self.context_var_set(name=k)
 
     def _handle_runtime_context_exited(self, context_vars):
         for k in list(context_vars.keys()):
-            self.context_var_updated(name=k)
+            self.context_var_reset(name=k)
 
 
 def runtime_context_env(env_cls):

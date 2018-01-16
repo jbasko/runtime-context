@@ -1,5 +1,7 @@
 import pytest
 
+from runtime_context import RuntimeContext
+
 
 def test_rc_basics(rc):
     """
@@ -107,6 +109,62 @@ def test_rc_set(rc):
             assert rc.get('yy') is True
 
         assert not rc.is_context_var('yy')
+
+
+@pytest.mark.parametrize('reset_method', ['do_reset', 'do_delete'])
+def test_rc_reset(rc, reset_method):
+    def do_reset():
+        rc.reset('xxx')
+
+    def do_delete():
+        del rc.xxx
+
+    reset = locals()[reset_method]
+
+    with rc(xxx=None):
+        assert rc.xxx is None
+
+        reset()
+        with pytest.raises(AttributeError):
+            _ = rc.xxx  # noqa
+
+        with rc(xxx=1):
+            assert rc.xxx == 1
+
+            reset()
+            with pytest.raises(AttributeError):
+                _ = rc.xxx  # noqa
+
+            rc.xxx = 2
+            reset()
+            with pytest.raises(AttributeError):
+                _ = rc.xxx  # noqa
+
+            rc.xxx = 3
+
+        with pytest.raises(AttributeError):
+            _ = rc.xxx  # noqa
+
+        with pytest.raises(AttributeError):
+            _ = rc.xxx  # noqa
+
+
+def test_can_reset_nonexistent_context_var_with_reset_method(rc: RuntimeContext):
+    assert 'xxx' not in rc._stack[-1]
+    rc.reset('xxx')
+    rc.reset('xxx')
+
+
+def test_cannot_reset_nonexistent_context_var_via_del_attr(rc: RuntimeContext):
+    # As we don't keep a list of all names, if something
+    # is not in the context we don't know if it's a context var
+    # so we delegate to object.__delattr__ and that obviously raises AttributeError.
+
+    with pytest.raises(AttributeError):
+        del rc.xxx
+
+    with pytest.raises(AttributeError):
+        del rc.xxx
 
 
 def test_context_entered_and_exited_events_are_triggered(rc):

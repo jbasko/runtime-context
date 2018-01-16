@@ -65,7 +65,7 @@ runtime-context
     env = YourApp()  # type: Union[YourApp, EnvBase]
 
 
-    @env.context_var_updated.listener(predicate=lambda name: name == 'config_file')
+    @env.context_var_set.listener(predicate=lambda name: name == 'config_file')
     def reload_config():
         if not env.config_file:
             return

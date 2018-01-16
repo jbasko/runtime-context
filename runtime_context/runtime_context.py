@@ -55,6 +55,14 @@ class RuntimeContext:
         else:
             self.set(name, value)
 
+    def __delattr__(self, name):
+        if name in self._internals_:
+            raise AttributeError('{!r} should not be deleted'.format(name))
+        elif self.is_context_var(name):
+            return self.reset(name)
+        else:
+            return object.__delattr__(self, name)
+
     def get(self, name, default=None):
         for ctx in reversed(self._stack):
             if name in ctx:
@@ -66,10 +74,21 @@ class RuntimeContext:
             raise RuntimeError('Trying to set context variable {!r} outside of runtime context'.format(name))
         self._stack[-1][name] = value
 
+    def reset(self, name):
+        """
+        Resets the value of a var in the current context.
+        """
+        if not self._stack:
+            raise RuntimeError('Trying to reset context variable {!r} outside of runtime context'.format(name))
+        if name in self._stack[-1]:
+            del self._stack[-1][name]
+
     def reset_context(self):
         """
         Clears current context state
         """
+        if not self._stack:
+            raise RuntimeError('Trying to reset context when there is none')
         self._stack[-1].clear()
 
     def is_context_var(self, name):
