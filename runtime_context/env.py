@@ -4,7 +4,7 @@ context variables.
 """
 from hookery import Event, Registry  # noqa
 
-from .runtime_context import RuntimeContext
+from .runtime_context import RuntimeContextWrapper
 
 
 class EnvBase:
@@ -24,7 +24,7 @@ class EnvBase:
         '_handle_runtime_context_exited',
     )
 
-    runtime_context = None  # type: RuntimeContext
+    runtime_context = None  # type: RuntimeContextWrapper
 
     def __init__(self):
         self._hookery = Registry()
@@ -118,5 +118,5 @@ class EnvBase:
 
 def runtime_context_env(env_cls):
     return type(env_cls.__name__, (env_cls, EnvBase), {
-        'runtime_context': RuntimeContext(),
+        'runtime_context': RuntimeContextWrapper(),
     })

@@ -1,6 +1,6 @@
-from runtime_context import RuntimeContext
+from runtime_context import RuntimeContextWrapper
 
-runtime_context = RuntimeContext()
+runtime_context = RuntimeContextWrapper()
 
 
 def do_something(i):

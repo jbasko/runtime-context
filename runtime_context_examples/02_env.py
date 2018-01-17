@@ -21,9 +21,6 @@ env = YourApp()  # type: Union[YourApp, EnvBase]
 
 @env.context_var_set.listener(predicate=lambda name: name == 'config_file')
 def reload_config():
-    if not env.config_file:
-        return
-
     print('Reloading config from {}'.format(env.config_file))
     with open(env.config_file) as f:
         config = json.load(f)

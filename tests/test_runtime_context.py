@@ -1,6 +1,6 @@
 import pytest
 
-from runtime_context import RuntimeContext
+from runtime_context import Context, RuntimeContextWrapper
 
 
 def test_rc_basics(rc):
@@ -149,13 +149,13 @@ def test_rc_reset(rc, reset_method):
             _ = rc.xxx  # noqa
 
 
-def test_can_reset_nonexistent_context_var_with_reset_method(rc: RuntimeContext):
+def test_can_reset_nonexistent_context_var_with_reset_method(rc: RuntimeContextWrapper):
     assert 'xxx' not in rc._stack[-1]
     rc.reset('xxx')
     rc.reset('xxx')
 
 
-def test_cannot_reset_nonexistent_context_var_via_del_attr(rc: RuntimeContext):
+def test_cannot_reset_nonexistent_context_var_via_del_attr(rc: RuntimeContextWrapper):
     # As we don't keep a list of all names, if something
     # is not in the context we don't know if it's a context var
     # so we delegate to object.__delattr__ and that obviously raises AttributeError.
@@ -230,3 +230,36 @@ def test_reset_context(rc):
             rc.x = 111
             rc.reset_context()
             assert rc._stack[-1] == {}
+
+
+def test_push_and_pop_context_and_current_context(rc):
+    rc.x = 55
+
+    rc.push_context()
+    assert len(rc._stack) == 2
+    assert rc.x == 55
+    assert rc.current == {}
+
+    rc.pop_context()
+    assert len(rc._stack) == 1
+    assert rc.x == 55
+    assert rc.current == {'x': 55}
+
+    rc.push_context({'x': 8888, 'y': 9999})
+    assert rc.x == 8888
+    assert rc.current == {'x': 8888, 'y': 9999}
+
+    rc.pop_context()
+    assert rc.x == 55
+    assert rc.current == {'x': 55}
+
+
+def test_there_is_always_one_context_already_pushed_on_wrapper_creation():
+    wrapper1 = RuntimeContextWrapper()
+    assert len(wrapper1._stack) == 1
+    assert isinstance(wrapper1.current, Context)
+
+    wrapper2 = RuntimeContextWrapper()
+    assert len(wrapper2._stack) == 1
+    assert wrapper1._stack is not wrapper2._stack
+    assert wrapper1.current is not wrapper2.current
